@@ -1,0 +1,28 @@
+#
+# Recording : Which Client IP address, querying which Domain Name, and what are the Domain Name Resolution Answers; the record is stored as long as the Resource Record TTL value.
+# The record can be looked-up when the client actually build connection to one of the Domain Name Resolution Answer IP Addresses, as long as the record has not been expired.
+#
+
+when CLIENT_ACCEPTED {
+ set Client_IP [IP::client_addr]
+}
+
+when DNS_REQUEST {
+ set Query_Name [DNS::question name]
+}
+
+when DNS_RESPONSE {
+ set ResourceRecords [DNS::answer]
+ foreach Record $ResourceRecords {
+  if { [DNS::type $Record] == "A" } {
+   set TimeOut [DNS::ttl $Record]
+   set Answer [string trim [getfield $Record "A" 2]]
+   table add "$Client_IP|$Answer" "$Query_Name" $TimeOut $TimeOut
+  }
+  if { [DNS::type $Record] == "AAAA" } {
+   set TimeOut [DNS::ttl $Record]
+   set Answer [string trim [getfield $Record "AAAA" 2]]
+   table add "$Client_IP|$Answer" "$Query_Name" $TimeOut $TimeOut
+  }
+ }
+}

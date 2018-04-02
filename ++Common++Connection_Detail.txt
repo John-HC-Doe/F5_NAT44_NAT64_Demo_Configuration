@@ -1,0 +1,55 @@
+#
+# Just for the demo to :
+#    Local Log the :
+#       Source IP:Port and Destination IP:Port at the Client Side (i.e. on the Internal VLAN) :
+#          Source IP,
+#          Source Port,
+#          Destination IP,
+#          Destination Port
+#       Source IP:Port and Destination IP:Port at the Server Side (i.e. on the Intermediate VLAN) :
+#          Translated Source IP,
+#          Translated Source Port,
+#          Translated Destination IP,
+#          Translated Destination Port
+#       Domain Name of the Destination IP, when applicable (when exists or when not expired yet)
+#
+
+when CLIENT_ACCEPTED {
+ set HSL_Variable [HSL::open -publisher /Common/Log_Publisher]
+ set Time_Start [clock seconds]
+ set Protocol [IP::protocol]
+ set Source_IP [IP::client_addr]
+ set Source_Port [TCP::client_port]
+ set Destination_IP [IP::local_addr clientside]
+ set Destination_Port [TCP::local_port clientside]
+ set Log_Close 0
+}
+
+when SERVER_CONNECTED {
+ set Translated_Protocol [IP::protocol]
+ set Translated_Source_IP [IP::local_addr serverside]
+ set Translated_Source_Port [TCP::local_port serverside]
+ set Translated_Destination_IP [IP::server_addr]
+ set Translated_Destination_Port [TCP::server_port]
+
+ set Destination_Name [table lookup -notouch "$Source_IP|$Destination_IP"]
+ HSL::send $HSL_Variable "\[[clock format $Time_Start -format "%Y-%m-%d %H:%M:%S"]\] \[ \] \[$Protocol\] \[$Source_IP $Source_Port\] \[$Destination_IP $Destination_Port\] \[$Translated_Protocol\] \[$Translated_Source_IP $Translated_Source_Port\] \[$Translated_Destination_IP $Translated_Destination_Port\] \[$Destination_Name\]"
+}
+
+when SERVER_CLOSED {
+ if {$Log_Close} {
+ } else {
+  set Time_End [clock seconds]
+  HSL::send $HSL_Variable "\[[clock format $Time_Start -format "%Y-%m-%d %H:%M:%S"]\] \[[clock format $Time_End -format "%Y-%m-%d %H:%M:%S"]\] \[$Protocol\] \[$Source_IP $Source_Port\] \[$Destination_IP $Destination_Port\] \[$Translated_Protocol\] \[$Translated_Source_IP $Translated_Source_Port\] \[$Translated_Destination_IP $Translated_Destination_Port\] \[$Destination_Name\]"
+  set Log_Close 1
+ }
+}
+
+when CLIENT_CLOSED {
+ if {$Log_Close} {
+ } else {
+  set Time_End [clock seconds]
+  HSL::send $HSL_Variable "\[[clock format $Time_Start -format "%Y-%m-%d %H:%M:%S"]\] \[[clock format $Time_End -format "%Y-%m-%d %H:%M:%S"]\] \[$Protocol\] \[$Source_IP $Source_Port\] \[$Destination_IP $Destination_Port\] \[$Translated_Protocol\] \[$Translated_Source_IP $Translated_Source_Port\] \[$Translated_Destination_IP $Translated_Destination_Port\] \[$Destination_Name\]"
+  set Log_Close 1
+ }
+}
